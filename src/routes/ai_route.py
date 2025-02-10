@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from typing import Dict
-from ..schemas.ai import AnalysisRequest, SolutionRequest
+from ..schemas.ai_schema import AnalysisRequest, SolutionRequest
 
 router = APIRouter()
 

@@ -1,343 +1,261 @@
-# ScriptO Flutter Technical Design Document
+## System Architecture
 
-## System Overview
-ScriptO is a mobile-first note-taking application built with Flutter, combining handwriting recognition with real-time AI assistance for STEM subjects. While cross-platform capabilities are supported, the primary focus is on delivering an exceptional mobile experience, with tablet support being a key priority.
+### 1. Core Modules
 
-## Core Technical Requirements
+```swift
+// Core data models
+struct Note {
+    let id: UUID
+    let userId: UUID
+    let title: String
+    let content: [NoteElement]
+    let created: Date
+    let modified: Date
+    let tags: [String]
+    let subject: Subject?
+}
 
-### Frontend Architecture
-- **Framework**: Flutter
-  - *Rationale*: Cross-platform support, excellent performance, rich widget ecosystem
-- **State Management**: Riverpod
-  - *Rationale*: Better dependency injection, simpler than Provider, great for complex state
-- **Local Storage**: Hive
-  - *Rationale*: Fast NoSQL database, great for Flutter, supports complex objects
+struct NoteElement {
+    let id: UUID
+    let type: ElementType // Enum: drawing, text, image, aiAnnotation
+    let content: Any
+    let bounds: CGRect
+    let timestamp: Date
+    let strokeProperties: StrokeProperties?
+}
 
-### Backend Architecture
-- **Framework**: FastAPI (remains unchanged)
-  - *Rationale*: High performance, async support, great for mobile APIs
-- **Database**: PostgreSQL
-- **Caching**: Redis
+struct StrokeProperties {
+    let color: UIColor
+    let width: Float
+    let pressure: Float
+    let tool: DrawingTool // Enum: pen, pencil, highlighter
+    let opacity: Float
+}
 
-## Core Components
+struct AIAssistant {
+    let id: UUID
+    let type: AssistantType // Enum: math, physics, chemistry, biology, vocabulary
+    let context: String
+    let confidence: Float
+    let suggestions: [AISuggestion]
+}
 
-### 1. Note-Taking Interface
+```
 
-#### Canvas Implementation Options
+### 2. Vision and Recognition Layer
 
-##### Option 1: Flutter CustomPainter
-```dart
-class StrokesPainter extends CustomPainter {
-  final List<Stroke> strokes;
-  
-  StrokesPainter(this.strokes);
-  
-  @override
-  void paint(Canvas canvas, Size size) {
-    for (final stroke in strokes) {
-      final paint = Paint()
-        ..color = stroke.color
-        ..strokeWidth = stroke.width
-        ..strokeCap = StrokeCap.round;
-      
-      canvas.drawPoints(
-        PointMode.polygon,
-        stroke.points,
-        paint,
-      );
+```swift
+protocol HandwritingRecognitionProtocol {
+    func recognizeText(from strokes: [StrokePoint]) async throws -> RecognitionResult
+    func classifyContent(text: String) async throws -> ContentClassification
+    func detectEquations(in text: String) async throws -> [EquationDetection]
+}
+
+class VisionManager {
+    // Real-time vision processing
+    func processDrawing(strokes: [StrokePoint]) async throws -> RecognitionResult
+    func identifySubject(text: String) async throws -> Subject
+    func extractKeyTerms(text: String) async throws -> [Term]
+}
+
+```
+
+## Backend API Structure
+
+### 1. Note Management Endpoints
+
+```swift
+/api/v1/notes
+├── /create                 // Create new note
+├── /update                 // Update existing note
+├── /share                  // Share note with others
+├── /export                 // Export note to PDF/Image
+└── /search                 // Search through notes
+
+/api/v1/ai
+├── /analyze                // Analyze handwritten content
+├── /solve                  // Get solution steps
+├── /explain               // Get detailed explanations
+└── /suggest               // Get learning suggestions
+
+```
+
+### 2. User Management Endpoints
+
+```swift
+/api/v1/users
+├── /profile                // Manage user profile
+├── /preferences            // Set learning preferences
+├── /history               // View learning history
+└── /progress              // Track subject progress
+
+```
+
+## iOS App Structure
+
+### 1. Main App Structure
+
+```markdown
+SmartNotesApp/
+├── Screens/
+│   ├── Authentication/
+│   │   ├── LoginView
+│   │   └── SignUpView
+│   ├── NoteTaking/
+│   │   ├── CanvasView
+│   │   ├── ToolbarView
+│   │   └── AIAssistantView
+│   ├── Library/
+│   │   ├── NotesGridView
+│   │   ├── SubjectView
+│   │   └── SearchView
+│   └── Settings/
+│       ├── UserProfileView
+│       ├── AIPreferencesView
+│       └── ExportSettingsView
+└── Components/
+    ├── Drawing/
+    │   ├── StrokeView
+    │   ├── LayerManager
+    │   └── ToolSelector
+    ├── AI/
+    │   ├── SolutionStepsView
+    │   ├── DefinitionCard
+    │   └── HintBubble
+    └── Common/
+        ├── SubjectTags
+        ├── ShareSheet
+        └── ExportOptions
+
+```
+
+## AI Integration
+
+### 1. Recognition Engine
+
+```swift
+class RecognitionEngine {
+    func processStrokes(strokes: [Stroke]) async throws -> RecognizedContent {
+        // Process handwritten strokes in real-time
     }
-  }
-  
-  @override
-  bool shouldRepaint(StrokesPainter oldDelegate) => 
-    strokes != oldDelegate.strokes;
-}
-```
-**Pros:**
-- Native Flutter performance
-- Full control over rendering
-- Small package size
 
-**Cons:**
-- More complex to implement
-- Need to handle all gestures manually
-
-##### Option 2: flutter_drawing_board Package
-```dart
-class DrawingCanvas extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return DrawingBoard(
-      controller: _controller,
-      background: Container(color: Colors.white),
-      strokeWidth: 2.0,
-      onDrawStart: _handleDrawStart,
-      onDrawEnd: _handleDrawEnd,
-    );
-  }
-}
-```
-**Pros:**
-- Many features built-in
-- Easy to implement
-- Good touch support
-
-**Cons:**
-- Less control over internals
-- Dependent on package updates
-
-#### Stroke Data Structure
-```dart
-@freezed
-class Stroke with _$Stroke {
-  const factory Stroke({
-    required String id,
-    required List<Offset> points,
-    required Color color,
-    required double width,
-    required StrokeType type,
-    required DateTime created,
-  }) = _Stroke;
-  
-  factory Stroke.fromJson(Map<String, dynamic> json) => 
-    _$StrokeFromJson(json);
-}
-```
-
-### 2. Recognition Pipeline
-
-#### Handwriting Recognition Integration
-```dart
-class RecognitionService {
-  final MyScriptClient _client;
-  
-  Future<String> recognizeStrokes(List<Stroke> strokes) async {
-    try {
-      final response = await _client.recognize(
-        strokes.map((s) => s.toMyScriptFormat()).toList(),
-      );
-      return response.text;
-    } on MyScriptException catch (e) {
-      // Fallback to local Tesseract
-      return _recognizeLocally(strokes);
+    func classifyProblemType(content: RecognizedContent) async throws -> ProblemType {
+        // Identify type of problem (math, physics, etc.)
     }
-  }
-}
-```
 
-### 3. AI Assistant Integration
-
-#### State Management with Riverpod
-```dart
-@riverpod
-class AssistantState extends _$AssistantState {
-  final _claudeService = ClaudeService();
-  
-  Stream<AssistantResponse> getSolution(String problem) async* {
-    state = const AsyncValue.loading();
-    
-    try {
-      await for (final chunk in _claudeService.streamSolution(problem)) {
-        yield* Stream.value(AsyncValue.data(chunk));
-      }
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
+    func extractKeyTerms(content: RecognizedContent) async throws -> [Term] {
+        // Extract important terms and concepts
     }
-  }
 }
+
 ```
 
-#### UI Implementation
-```dart
-class AssistantPanel extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final solutionState = ref.watch(assistantStateProvider);
-    
-    return AnimatedSlide(
-      offset: Offset(solutionState.isLoading ? 0 : 1, 0),
-      child: Container(
-        width: 300,
-        child: solutionState.when(
-          data: (solution) => SolutionView(solution),
-          loading: () => LoadingIndicator(),
-          error: (e, st) => ErrorView(e),
-        ),
-      ),
-    );
-  }
-}
-```
+### 2. Solution Generator
 
-### 4. Offline Support
-
-#### Local Storage with Hive
-```dart
-@HiveType(typeId: 0)
-class Note extends HiveObject {
-  @HiveField(0)
-  final String id;
-  
-  @HiveField(1)
-  final List<Stroke> strokes;
-  
-  @HiveField(2)
-  final String recognizedText;
-  
-  @HiveField(3)
-  final DateTime lastModified;
-}
-
-class NoteRepository {
-  final Box<Note> _box;
-  
-  Future<void> saveNote(Note note) async {
-    await _box.put(note.id, note);
-    // Queue for sync when online
-    await _syncQueue.add(note.id);
-  }
-}
-```
-
-### 5. Sync System
-
-#### Background Sync
-```dart
-class SyncService {
-  final NoteRepository _repository;
-  final ApiClient _api;
-  
-  Future<void> syncNotes() async {
-    final queue = await _repository.getSyncQueue();
-    
-    for (final noteId in queue) {
-      final note = await _repository.getNote(noteId);
-      try {
-        await _api.uploadNote(note);
-        await _repository.markSynced(noteId);
-      } catch (e) {
-        // Handle error, retry later
-      }
+```swift
+class SolutionGenerator {
+    func generateSteps(
+        problem: RecognizedProblem,
+        type: ProblemType
+    ) async throws -> [SolutionStep] {
+        // Generate detailed solution steps
     }
-  }
-}
-```
 
-## Mobile-First Priorities
-
-### Core Mobile Features
-- Optimized for touch and stylus input
-- Mobile-specific UI patterns (bottom sheets, FABs, etc.)
-- Responsive to different screen sizes
-- Battery and resource optimization
-- Offline-first approach
-- Haptic feedback for better drawing experience
-
-### Tablet Optimization
-- Split-view support
-- Enhanced stylus features for tablets
-- Optimized UI for larger screens
-- Multi-window support (iPadOS/Android)
-
-### iOS
-- Apple Pencil support
-- PencilKit integration (optional)
-- iCloud backup integration
-
-### Android
-- S-Pen support for Samsung devices
-- Stylus API integration
-- Android backup service integration
-
-## Performance Optimizations
-
-### Drawing Optimization
-```dart
-class OptimizedStrokeManager {
-  // Simplify points while drawing to reduce memory
-  List<Offset> _optimizePoints(List<Offset> points) {
-    return points.reducedByDistance(minDistance: 2.0);
-  }
-  
-  // Batch render updates
-  void addPoint(Offset point) {
-    _points.add(point);
-    if (_points.length > 10) {
-      _optimizeAndUpdate();
+    func provideHints(
+        currentStep: SolutionStep,
+        userProgress: Progress
+    ) async throws -> [Hint] {
+        // Generate contextual hints
     }
-  }
 }
+
 ```
 
-### Memory Management
-- Implement virtual scrolling for long notes
-- Lazy load images and resources
-- Cache commonly used UI elements
+## Drawing Engine
+
+### 1. Stroke Management
+
+```swift
+class StrokeManager {
+    func recordStroke(points: [CGPoint], properties: StrokeProperties) -> Stroke
+    func updateStroke(stroke: Stroke, newPoints: [CGPoint])
+    func deleteStroke(stroke: Stroke)
+    func undoLastStroke()
+}
+
+```
+
+### 2. Layer Management
+
+```swift
+class LayerManager {
+    func createLayer() -> DrawingLayer
+    func mergeLayer(source: DrawingLayer, target: DrawingLayer)
+    func reorderLayers(order: [UUID])
+    func toggleLayerVisibility(layer: DrawingLayer)
+}
+
+```
+
+## Security Considerations
+
+1. Data Protection
+    - End-to-end encryption for notes
+    - Secure storage of AI processing results
+    - Privacy-focused handwriting recognition
+2. User Privacy
+    - Anonymous learning analytics
+    - Configurable data sharing options
+    - COPPA compliance for educational use
+
+## Performance Optimization
+
+1. Drawing Performance
+    - Metal-based rendering
+    - Stroke simplification
+    - Dynamic resolution scaling
+2. AI Processing
+    - Local ML model for basic recognition
+    - Batch processing for complex problems
+    - Caching of common solutions
 
 ## Testing Strategy
 
-### Unit Tests
-```dart
-void main() {
-  group('Stroke Recognition Tests', () {
-    test('should recognize basic shapes', () async {
-      final service = RecognitionService();
-      final strokes = createTestStrokes();
-      
-      final result = await service.recognizeStrokes(strokes);
-      
-      expect(result, contains('circle'));
-    });
-  });
-}
-```
+1. Recognition Testing
+    - Handwriting accuracy
+    - Problem classification
+    - Solution verification
+2. Performance Testing
+    - Drawing latency
+    - AI response time
+    - Memory usage
 
-### Widget Tests
-```dart
-void main() {
-  testWidgets('Canvas should handle basic drawing', (tester) async {
-    await tester.pumpWidget(DrawingCanvas());
-    
-    await tester.dragFrom(Offset(0, 0), Offset(100, 100));
-    await tester.pumpAndSettle();
-    
-    expect(find.byType(CustomPaint), findsOneWidget);
-  });
-}
-```
+## Deployment Strategy
 
-## Development Timeline
+1. Phase 1: Core Features
+    - Basic note-taking
+    - Math problem recognition
+    - Step-by-step solutions
+2. Phase 2: Enhanced Learning
+    - Multiple subjects support
+    - Personalized hints
+    - Progress tracking
+3. Phase 3: Collaboration
+    - Note sharing
+    - Teacher dashboard
+    - Group study features
 
-### Phase 1 (Weeks 1-2)
-- Basic canvas implementation
-- Stroke management
-- Local storage setup
+## Analytics and Monitoring
 
-### Phase 2 (Weeks 3-4)
-- Recognition integration
-- AI assistant integration
-- Basic UI/UX
-
-### Phase 3 (Weeks 5-6)
-- Offline support
-- Sync system
-- Performance optimization
-
-## Future Considerations
-
-### Mobile Enhancement Priorities
-- Advanced mobile-specific features (widgets, quick actions)
-- Deep integration with mobile OS features
-- Mobile-optimized collaboration features
-- Enhanced mobile performance optimizations
-
-### Feature Extensions
-- Real-time collaboration
-- Cloud sync across devices
-- Advanced stylus support
-- AR integration for 3D diagrams
-
-### Scaling Considerations
-- Implement efficient data pagination
-- Optimize asset loading
-- Consider using compute isolates for heavy tasks
+1. Learning Analytics
+    - Subject mastery levels
+    - Common problem areas
+    - Solution effectiveness
+2. Technical Metrics
+    - Recognition accuracy
+    - AI response times
+    - User engagement patterns
+3. Usage Patterns
+    - Popular subjects
+    - Feature adoption
+    - Learning pathways

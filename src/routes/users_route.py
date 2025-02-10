@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from typing import List
-from ..schemas.user import UserProfile, UserPreferences
+from ..schemas.user_schema import UserProfile, UserPreferences
 
 router = APIRouter()
 

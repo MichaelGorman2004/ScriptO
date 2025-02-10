@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List
 from uuid import UUID
-from ..schemas.note import NoteCreate, NoteResponse, NoteUpdate
+from ..schemas.note_schema import NoteCreate, NoteResponse, NoteUpdate
 from ..services.note_service import NoteService
 
 router = APIRouter()
