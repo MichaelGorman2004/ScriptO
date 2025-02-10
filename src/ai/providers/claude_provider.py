@@ -138,26 +138,4 @@ class ClaudeProvider(BaseAIProvider):
             "term": term,
             "context": context,
             "type": "term_definition"
-        }
-        
-    def _build_analysis_prompt(self, content: str, content_type: str) -> str:
-        return f"""
-        <content_type>{content_type}</content_type>
-        <content>{content}</content>
-        
-        <instructions>
-        Please analyze this content and provide:
-        1. Main topics and themes
-        2. Key concepts
-        3. Complexity level
-        4. Suggested prerequisites
-        </instructions>
-        """
-    
-    def _parse_analysis_response(self, response: str) -> Dict:
-        # TODO: Implement proper XML parsing
-        # For now, return simple dict
-        return {
-            "raw_response": response,
-            "parsed": True
         } 
