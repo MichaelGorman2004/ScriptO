@@ -19,7 +19,7 @@ from ..ai.providers.claude_provider import ClaudeProvider
 from ..ai.processors.problem_processor import ProblemProcessor
 from ..ai.processors.content_processor import ContentProcessor
 from ..ai.config.ai_config import AIConfig
-from ..ai.utils.exceptions import AIError, ProcessingError
+from ..ai.utils.exceptions import AIError, ProcessingError, AIProviderError
 
 class AIService(BaseService[AIInteraction, AIResponse, AIResponse]):
     """Service for handling AI-related operations."""
@@ -27,25 +27,14 @@ class AIService(BaseService[AIInteraction, AIResponse, AIResponse]):
     def __init__(self, db: Session, api_key: str, config: Optional[AIConfig] = None):
         super().__init__(model=AIInteraction, db=db)
         self.config = config or AIConfig()
-        self.provider = ClaudeProvider(api_key=api_key)
-        self.problem_processor = ProblemProcessor(ai_provider=self.provider)
-        self.content_processor = ContentProcessor(ai_provider=self.provider)
+        try:
+            self.provider = ClaudeProvider(api_key=api_key, config=self.config)
+            self.problem_processor = ProblemProcessor(ai_provider=self.provider)
+            self.content_processor = ContentProcessor(ai_provider=self.provider)
+        except AIError as e:
+            raise HTTPException(status_code=500, detail=f"Failed to initialize AI service: {str(e)}")
     
     async def solve_stem_problem(self, problem: str, user_id: UUID, context: Dict = None) -> AIResponse:
-        """
-        Process and solve a STEM problem
-        
-        Args:
-            problem: The STEM problem to solve
-            user_id: UUID of the requesting user
-            context: Optional context like subject, grade level
-            
-        Returns:
-            AIResponse containing the solution
-            
-        Raises:
-            HTTPException: If processing or solution generation fails
-        """
         try:
             # Process the problem
             processed = await self.problem_processor.process(problem, context)
@@ -73,27 +62,14 @@ class AIService(BaseService[AIInteraction, AIResponse, AIResponse]):
             
             return response
             
+        except ProcessingError as e:
+            raise HTTPException(status_code=400, detail=f"Failed to process problem: {str(e)}")
+        except AIProviderError as e:
+            raise HTTPException(status_code=500, detail=f"AI provider error: {str(e)}")
         except Exception as e:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to solve STEM problem: {str(e)}"
-            )
+            raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
     
     async def define_term(self, term: str, user_id: UUID, context: Dict = None) -> AIResponse:
-        """
-        Process and define a term
-        
-        Args:
-            term: The term to define
-            user_id: UUID of the requesting user
-            context: Optional context like subject, grade level
-            
-        Returns:
-            AIResponse containing the definition
-            
-        Raises:
-            HTTPException: If processing or definition generation fails
-        """
         try:
             # Process the term
             processed = await self.content_processor.process(term, context)
@@ -121,11 +97,12 @@ class AIService(BaseService[AIInteraction, AIResponse, AIResponse]):
             
             return response
             
+        except ProcessingError as e:
+            raise HTTPException(status_code=400, detail=f"Failed to process term: {str(e)}")
+        except AIProviderError as e:
+            raise HTTPException(status_code=500, detail=f"AI provider error: {str(e)}")
         except Exception as e:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to define term: {str(e)}"
-            )
+            raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
     
     async def _log_interaction(
         self,
@@ -134,11 +111,15 @@ class AIService(BaseService[AIInteraction, AIResponse, AIResponse]):
         response: AIResponse
     ) -> None:
         """Log AI interaction for tracking."""
-        interaction = AIInteraction(
-            user_id=user_id,
-            request_data=request_data,
-            response_data=response.model_dump(),
-            created_at=datetime.utcnow()
-        )
-        self.db.add(interaction)
-        self.db.commit() 
+        try:
+            interaction = AIInteraction(
+                user_id=user_id,
+                request_data=request_data,
+                response_data=response.model_dump(),
+                created_at=datetime.utcnow()
+            )
+            self.db.add(interaction)
+            self.db.commit()
+        except Exception as e:
+            # Log the error but don't fail the request
+            print(f"Failed to log interaction: {str(e)}") 
