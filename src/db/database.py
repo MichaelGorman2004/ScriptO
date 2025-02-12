@@ -2,7 +2,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from contextlib import contextmanager
-from config.settings import settings
+from src.config.settings import settings
 
 # Create engine with connection pool settings
 engine = create_engine(

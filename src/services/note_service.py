@@ -17,9 +17,9 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime, UTC
 
-from ..models.note_model import Note
-from ..schemas.note_schema import NoteCreate, NoteUpdate, NoteElement
-from .base_service import BaseService
+from src.models.note_model import Note
+from src.schemas.note_schema import NoteCreate, NoteUpdate, NoteElement
+from src.services.base_service import BaseService
 
 class NoteService(BaseService[Note, NoteCreate, NoteUpdate]):
     """

@@ -1,0 +1,6 @@
+README.md
+setup.py
+scripto.egg-info/PKG-INFO
+scripto.egg-info/SOURCES.txt
+scripto.egg-info/dependency_links.txt
+scripto.egg-info/top_level.txt

@@ -5,7 +5,7 @@ from sqlalchemy import Column, DateTime, String, Float, JSON, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import relationship
 
-from ..db.database import Base
+from src.db.database import Base
 
 class AIAssistant(Base):
     __tablename__ = "ai_assistants"

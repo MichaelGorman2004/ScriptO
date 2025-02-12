@@ -12,14 +12,14 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime
 
-from ..schemas.ai_schema import AIResponse
-from ..models.ai_model import AIInteraction
-from .base_service import BaseService
-from ..ai.providers.claude_provider import ClaudeProvider
-from ..ai.processors.problem_processor import ProblemProcessor
-from ..ai.processors.content_processor import ContentProcessor
-from ..ai.config.ai_config import AIConfig
-from ..ai.utils.exceptions import AIError, ProcessingError, AIProviderError
+from src.schemas.ai_schema import AIResponse
+from src.models.ai_model import AIInteraction
+from src.services.base_service import BaseService
+from src.ai.providers.claude_provider import ClaudeProvider
+from src.ai.processors.problem_processor import ProblemProcessor
+from src.ai.processors.content_processor import ContentProcessor
+from src.ai.config.ai_config import AIConfig
+from src.ai.utils.exceptions import AIError, ProcessingError, AIProviderError
 
 class AIService(BaseService[AIInteraction, AIResponse, AIResponse]):
     """Service for handling AI-related operations."""

@@ -1,13 +1,15 @@
-fastapi>=0.68.0
-uvicorn>=0.15.0
-pydantic>=2.0.0
-sqlalchemy>=1.4.23
-python-jose>=3.3.0
-passlib>=1.7.4
-python-multipart>=0.0.5
-python-dotenv>=0.19.0
-psycopg2-binary>=2.9.1
-pydantic-settings>=2.0.0  # For settings management
-
-# AI Provider Dependencies
-anthropic>=0.8.0  # For Claude API integration 
+fastapi>=0.104.0
+uvicorn>=0.24.0
+pydantic>=2.4.2
+pydantic-settings>=2.0.3
+sqlalchemy>=2.0.23
+psycopg2-binary>=2.9.9  # PostgreSQL adapter
+alembic>=1.12.1  # Database migrations
+python-jose>=3.3.0  # JWT tokens
+passlib>=1.7.4  # Password hashing
+python-multipart>=0.0.6  # Form data processing
+python-dotenv>=1.0.0
+anthropic>=0.3.11  # Claude AI
+tenacity>=8.2.3  # Retry logic
+pytest>=7.4.3  # Testing
+httpx>=0.25.1  # Async HTTP client 
