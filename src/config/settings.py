@@ -1,16 +1,21 @@
 from pydantic_settings import BaseSettings
+from typing import List
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "ScriptO"
+    PROJECT_NAME: str = "ScriptO API"
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"
     
     # Database settings
     DATABASE_URL: str = "postgresql://user:password@localhost:5432/scripto"
     
-    # Security settings
-    SECRET_KEY: str = "your-secret-key"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
+    # Security
+    SECRET_KEY: str
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    
+    # CORS
+    ALLOWED_ORIGINS: List[str] = ["http://localhost:3000"]
     
     # AI Service settings
     AI_MODEL_PATH: str = "models/ai"
