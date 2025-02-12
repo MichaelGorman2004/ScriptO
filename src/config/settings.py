@@ -8,6 +8,11 @@ class Settings(BaseSettings):
     
     # Database settings
     DATABASE_URL: str = "postgresql://user:password@localhost:5432/scripto"
+    SQL_DEBUG: bool = False
+    DB_POOL_SIZE: int = 5
+    DB_MAX_OVERFLOW: int = 10
+    DB_POOL_TIMEOUT: int = 30
+    DB_POOL_RECYCLE: int = 1800
     
     # Security
     SECRET_KEY: str
