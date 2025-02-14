@@ -15,6 +15,7 @@ from passlib.context import CryptContext
 from src.models.user_model import User, UserPreferences
 from src.schemas.user_schema import UserCreate, UserUpdate, UserProfile
 from src.services.base_service import BaseService
+from src.utils.logging import logger
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -138,4 +139,20 @@ class UserService(BaseService[User, UserCreate, UserUpdate]):
     
     def _verify_password(self, plain_password: str, hashed_password: str) -> bool:
         """Verify a password against hash"""
-        return pwd_context.verify(plain_password, hashed_password) 
+        return pwd_context.verify(plain_password, hashed_password)
+    
+    async def authenticate_user(self, email: str, password: str) -> Optional[User]:
+        """Authenticate user by email and password"""
+        try:
+            user = self.db.query(User).filter(User.email == email).first()
+            if not user:
+                return None
+            
+            if not self._verify_password(password, user.hashed_password):
+                return None
+            
+            return user
+        
+        except Exception as e:
+            logger.error(f"Authentication error: {str(e)}")
+            return None 

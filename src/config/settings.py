@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 from typing import List
+import os
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "ScriptO API"
@@ -30,6 +31,11 @@ class Settings(BaseSettings):
     CLAUDE_API_KEY: str
     CLAUDE_MODEL: str = "claude-3-sonnet-20240229"
     CLAUDE_TIMEOUT: int = 30
+
+    # JWT configuration
+    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY")
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
     class Config:
         env_file = ".env"

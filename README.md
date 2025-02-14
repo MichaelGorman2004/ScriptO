@@ -104,30 +104,104 @@ alembic upgrade head
 
 ### Next Steps
 
-1. **API Development**
-- Implement REST endpoints
-- Add authentication/authorization
-- Set up request/response handling
-
-2. **AI Integration**
+1. **AI Integration**
 - Configure Claude AI provider
 - Implement content processing
 - Set up AI response handling
 
-3. **Testing**
+2. **Testing**
 - Add unit tests
 - Set up test database
 - Create integration tests
 
-4. **Frontend Integration**
+3. **Frontend Integration**
 - API documentation
 - CORS configuration
 - Authentication flow
 
-5. **Deployment**
+4. **Deployment**
 - Environment configuration
 - Database backups
 - Logging setup
+
+### API Routes
+
+1. **User Routes** (`/api/v1/users`)
+```
+POST   /register           # Register new user
+GET    /profile           # Get user profile
+PUT    /profile           # Update user profile
+PUT    /preferences       # Update user preferences
+POST   /change-password   # Change user password
+DELETE /deactivate        # Deactivate account
+```
+
+2. **Note Routes** (`/api/v1/notes`)
+```
+POST   /                  # Create new note
+GET    /{note_id}        # Get specific note
+PUT    /{note_id}        # Update note
+DELETE /{note_id}        # Delete note
+GET    /                  # List user's notes
+POST   /{note_id}/elements # Add note element
+GET    /search            # Search notes
+DELETE /bulk              # Bulk delete notes
+```
+
+3. **AI Routes** (`/api/v1/ai`)
+```
+POST   /solve             # Solve STEM problem
+POST   /define            # Define term/concept
+```
+
+### Route Details
+
+1. **User Operations**
+- Registration with email validation
+- Profile management
+- Preference settings
+- Password management
+- Account deactivation
+- Rate limiting: 30 requests/minute
+
+2. **Note Operations**
+- Full CRUD functionality
+- Element management
+- Search with sorting options
+- Bulk operations
+- Rate limiting: 60 requests/minute
+
+3. **AI Operations**
+- STEM problem solving
+- Term definitions
+- Rate limiting: 30 requests/minute
+- Background task processing
+
+### Response Format
+```json
+{
+    "success": boolean,
+    "message": string,
+    "data": any,
+    "metadata": {
+        "timestamp": datetime,
+        "version": string,
+        ...additional metadata
+    }
+}
+```
+
+### Common Response Codes
+```
+200 - Success
+201 - Created
+400 - Bad Request
+401 - Unauthorized
+403 - Forbidden
+404 - Not Found
+429 - Too Many Requests
+500 - Internal Server Error
+```
 
 ### Common Operations
 
