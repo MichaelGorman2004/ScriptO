@@ -1,29 +1,26 @@
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from typing import Dict
 from uuid import UUID
-import logging
+from sqlalchemy.orm import Session
 from datetime import datetime, UTC
 
 from ..schemas.ai_schema import StemProblemRequest, DefinitionRequest, AIResponse
 from ..services.ai_service import AIService
 from ..utils.response import APIResponse
 from ..middleware.rate_limiter import RateLimiter
+from ..middleware.auth import get_current_user
+from ..db.database import get_db
 from ..utils.logging import logger
-from ..ai.providers.claude_provider import ClaudeProvider
-from ..ai.config.ai_config import AIConfig
 
 router = APIRouter()
 rate_limiter = RateLimiter(requests_per_minute=30)
-
-# Initialize AI provider
-ai_config = AIConfig()
-claude_provider = ClaudeProvider(config=ai_config)
+ai_service = AIService()
 
 @router.post("/solve", response_model=APIResponse)
 async def solve_stem_problem(
     request: StemProblemRequest,
-    background_tasks: BackgroundTasks,
-    user_id: UUID  # Will come from JWT auth later
+    current_user_id: UUID = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """
     Solve a STEM problem using AI
@@ -32,13 +29,14 @@ async def solve_stem_problem(
     Rate limited to 30 requests per minute per user.
     """
     try:
-        logger.info(f"STEM problem solving request received for user {user_id}")
+        logger.info(f"STEM problem solving request received for user {current_user_id}")
         await rate_limiter(request)
         
-        # Queue the solution task
-        solution = await claude_provider.solve_stem_problem(
+        solution = await ai_service.solve_stem_problem(
+            db=db,
             problem=request.problem,
-            subject=request.subject
+            subject=request.subject,
+            user_id=current_user_id
         )
         
         return APIResponse(
@@ -52,18 +50,15 @@ async def solve_stem_problem(
             }
         )
         
-    except HTTPException as e:
-        logger.error(f"HTTP error in solve_stem_problem: {str(e)}")
-        raise
     except Exception as e:
-        logger.error(f"Unexpected error in solve_stem_problem: {str(e)}")
+        logger.error(f"Error in solve_stem_problem: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.post("/define", response_model=APIResponse)
 async def define_term(
     request: DefinitionRequest,
-    background_tasks: BackgroundTasks,
-    user_id: UUID  # Will come from JWT auth later
+    current_user_id: UUID = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """
     Define and explain a term using AI
@@ -72,13 +67,14 @@ async def define_term(
     Rate limited to 30 requests per minute per user.
     """
     try:
-        logger.info(f"Term definition request received for user {user_id}")
+        logger.info(f"Term definition request received for user {current_user_id}")
         await rate_limiter(request)
         
-        # Get definition from Claude
-        definition = await claude_provider.define_term(
+        definition = await ai_service.define_term(
+            db=db,
             term=request.term,
-            context=request.context
+            context=request.context,
+            user_id=current_user_id
         )
         
         return APIResponse(
@@ -92,9 +88,35 @@ async def define_term(
             }
         )
         
-    except HTTPException as e:
-        logger.error(f"HTTP error in define_term: {str(e)}")
-        raise
     except Exception as e:
-        logger.error(f"Unexpected error in define_term: {str(e)}")
+        logger.error(f"Error in define_term: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+"""
+TODO: Future Improvements
+
+1. Response Caching:
+   - Add caching for common STEM problems
+   - Add caching for frequently requested definitions
+   - Implement cache invalidation strategy
+
+2. Request Queuing:
+   - Add proper job queue for long-running requests
+   - Add progress tracking
+   - Add webhook notifications
+
+3. AI Optimization:
+   - Add request batching
+   - Add response streaming
+   - Add context management
+
+4. Error Handling:
+   - Add retry strategies
+   - Add fallback providers
+   - Add error classification
+
+5. Monitoring:
+   - Add performance metrics
+   - Add usage tracking
+   - Add cost monitoring
+"""
