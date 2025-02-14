@@ -112,3 +112,109 @@ class AIService(BaseService[AIInteraction, AIResponse, AIResponse]):
             logger.error(f"Failed to log interaction: {str(e)}")
             # Don't fail the request if logging fails
             db.rollback() 
+
+    async def create_pending_interaction(
+        self,
+        db: Session,
+        user_id: UUID,
+        interaction_type: str,
+        request_data: Dict
+    ) -> UUID:
+        """Create a pending interaction record"""
+        try:
+            interaction = AIInteraction(
+                user_id=user_id,
+                type=interaction_type,
+                status="pending",
+                request_data=request_data,
+                created_at=datetime.now(UTC)
+            )
+            db.add(interaction)
+            db.commit()
+            db.refresh(interaction)
+            return interaction.id
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error creating pending interaction: {str(e)}")
+            raise HTTPException(status_code=500, detail="Failed to create interaction")
+
+    async def process_stem_problem(
+        self,
+        db: Session,
+        interaction_id: UUID,
+        problem: str,
+        subject: str,
+        user_id: UUID,
+        context: Dict = None
+    ):
+        """Process a STEM problem in the background"""
+        try:
+            # Update status to processing
+            interaction = await self.get_interaction(db, interaction_id, user_id)
+            interaction.status = "processing"
+            db.commit()
+            
+            # Get solution from Claude
+            solution = await self.provider.solve_stem_problem(
+                problem=problem,
+                subject=subject
+            )
+            
+            # Update interaction with solution
+            interaction.response_data = solution
+            interaction.status = "completed"
+            interaction.completed_at = datetime.now(UTC)
+            db.commit()
+            
+        except Exception as e:
+            logger.error(f"Error processing stem problem: {str(e)}")
+            # Update interaction with error
+            interaction.status = "failed"
+            interaction.error_message = str(e)
+            db.commit()
+
+    async def get_interaction(
+        self,
+        db: Session,
+        interaction_id: UUID,
+        user_id: UUID
+    ) -> Optional[AIInteraction]:
+        """Get an interaction by ID, ensuring user ownership"""
+        return db.query(AIInteraction).filter(
+            AIInteraction.id == interaction_id,
+            AIInteraction.user_id == user_id
+        ).first()
+
+    async def process_term_definition(
+        self,
+        db: Session,
+        interaction_id: UUID,
+        term: str,
+        user_id: UUID,
+        context: Dict = None
+    ):
+        """Process a term definition in the background"""
+        try:
+            # Update status to processing
+            interaction = await self.get_interaction(db, interaction_id, user_id)
+            interaction.status = "processing"
+            db.commit()
+            
+            # Get definition from Claude
+            definition = await self.provider.define_term(
+                term=term,
+                context=context
+            )
+            
+            # Update interaction with definition
+            interaction.response_data = definition
+            interaction.status = "completed"
+            interaction.completed_at = datetime.now(UTC)
+            db.commit()
+            
+        except Exception as e:
+            logger.error(f"Error processing term definition: {str(e)}")
+            # Update interaction with error
+            interaction.status = "failed"
+            interaction.error_message = str(e)
+            db.commit() 

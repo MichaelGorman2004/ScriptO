@@ -13,7 +13,9 @@ class AIInteraction(Base):
     id = Column(PGUUID, primary_key=True, index=True)
     user_id = Column(PGUUID, ForeignKey("users.id"))
     type = Column(String)  # stem_solution or term_definition
+    status = Column(String)  # pending, processing, completed, failed
     request_data = Column(JSON)
-    response_data = Column(JSON)
-    confidence = Column(Float)
-    created_at = Column(DateTime, default=datetime.utcnow) 
+    response_data = Column(JSON, nullable=True)
+    error_message = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True) 
