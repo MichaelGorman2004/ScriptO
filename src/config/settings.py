@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     
     # Database settings
-    DATABASE_URL: str = "postgresql://user:password@localhost:5432/scripto"
+    DATABASE_URL: str
     SQL_DEBUG: bool = False
     DB_POOL_SIZE: int = 5
     DB_MAX_OVERFLOW: int = 10
@@ -25,6 +25,11 @@ class Settings(BaseSettings):
     # AI Service settings
     AI_MODEL_PATH: str = "models/ai"
     RECOGNITION_THRESHOLD: float = 0.8
+    
+    # Claude API settings
+    CLAUDE_API_KEY: str
+    CLAUDE_MODEL: str = "claude-3-sonnet-20240229"
+    CLAUDE_TIMEOUT: int = 30
 
     class Config:
         env_file = ".env"

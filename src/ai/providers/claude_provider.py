@@ -3,12 +3,13 @@ import anthropic
 from .base_provider import BaseAIProvider
 from ..config.ai_config import AIConfig
 from ..utils.exceptions import AIProviderError
+from src.config.settings import settings
 
 class ClaudeProvider(BaseAIProvider):
-    def __init__(self, api_key: str, config: AIConfig = None):
+    def __init__(self, config: AIConfig = None):
         self.config = config or AIConfig()
         try:
-            self.client = anthropic.Anthropic(api_key=api_key)
+            self.client = anthropic.Anthropic(api_key=settings.CLAUDE_API_KEY)
         except Exception as e:
             raise AIProviderError(f"Failed to initialize Claude client: {str(e)}")
         
