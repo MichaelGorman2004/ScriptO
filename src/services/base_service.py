@@ -12,11 +12,13 @@ Key Features:
 - Base CRUD operations
 """
 
-from typing import Generic, TypeVar, Type, Optional
+from typing import Generic, TypeVar, Type, Optional, List
 from uuid import UUID
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from fastapi import HTTPException
+
+from src.utils.logging import logger
 
 ModelType = TypeVar("ModelType")
 CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)
@@ -28,14 +30,16 @@ class BaseService(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     
     Attributes:
         model: The SQLAlchemy model class
-        db: Database session
     """
     
-    def __init__(self, model: Type[ModelType], db: Session):
+    def __init__(self, model: Type[ModelType]):
+        """
+        Initialize service with model class.
+        Database session will be injected per request.
+        """
         self.model = model
-        self.db = db
     
-    async def get(self, id: UUID) -> Optional[ModelType]:
+    async def get(self, db: Session, id: UUID) -> Optional[ModelType]:
         """
         Retrieve a single record by ID.
         
@@ -45,9 +49,14 @@ class BaseService(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         Returns:
             The found record or None
         """
-        return self.db.query(self.model).filter(self.model.id == id).first()
+        return db.query(self.model).filter(self.model.id == id).first()
     
-    async def get_all(self, skip: int = 0, limit: int = 100):
+    async def get_all(
+        self,
+        db: Session,
+        skip: int = 0,
+        limit: int = 100
+    ) -> List[ModelType]:
         """
         Retrieve multiple records with pagination.
         
@@ -58,9 +67,13 @@ class BaseService(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         Returns:
             List of records
         """
-        return self.db.query(self.model).offset(skip).limit(limit).all()
+        return db.query(self.model).offset(skip).limit(limit).all()
     
-    async def create(self, schema: CreateSchemaType) -> ModelType:
+    async def create(
+        self,
+        db: Session,
+        schema: CreateSchemaType
+    ) -> ModelType:
         """
         Create a new record.
         
@@ -70,17 +83,23 @@ class BaseService(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         Returns:
             The created record
         """
-        db_item = self.model(**schema.model_dump())
-        self.db.add(db_item)
         try:
-            self.db.commit()
-            self.db.refresh(db_item)
+            db_item = self.model(**schema.model_dump())
+            db.add(db_item)
+            db.commit()
+            db.refresh(db_item)
             return db_item
         except Exception as e:
-            self.db.rollback()
+            db.rollback()
+            logger.error(f"Create error in {self.__class__.__name__}: {str(e)}")
             raise HTTPException(status_code=400, detail=str(e))
     
-    async def update(self, id: UUID, schema: UpdateSchemaType) -> Optional[ModelType]:
+    async def update(
+        self,
+        db: Session,
+        id: UUID,
+        schema: UpdateSchemaType
+    ) -> Optional[ModelType]:
         """
         Update an existing record.
         
@@ -91,23 +110,24 @@ class BaseService(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         Returns:
             The updated record or None if not found
         """
-        db_item = await self.get(id)
-        if not db_item:
-            return None
-            
-        update_data = schema.model_dump(exclude_unset=True)
-        for field, value in update_data.items():
-            setattr(db_item, field, value)
-            
         try:
-            self.db.commit()
-            self.db.refresh(db_item)
+            db_item = await self.get(db, id)
+            if not db_item:
+                return None
+                
+            update_data = schema.model_dump(exclude_unset=True)
+            for field, value in update_data.items():
+                setattr(db_item, field, value)
+                
+            db.commit()
+            db.refresh(db_item)
             return db_item
         except Exception as e:
-            self.db.rollback()
+            db.rollback()
+            logger.error(f"Update error in {self.__class__.__name__}: {str(e)}")
             raise HTTPException(status_code=400, detail=str(e))
     
-    async def delete(self, id: UUID) -> bool:
+    async def delete(self, db: Session, id: UUID) -> bool:
         """
         Delete a record by ID.
         
@@ -117,14 +137,15 @@ class BaseService(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         Returns:
             True if deleted, False if not found
         """
-        db_item = await self.get(id)
-        if not db_item:
-            return False
-            
         try:
-            self.db.delete(db_item)
-            self.db.commit()
+            db_item = await self.get(db, id)
+            if not db_item:
+                return False
+                
+            db.delete(db_item)
+            db.commit()
             return True
         except Exception as e:
-            self.db.rollback()
+            db.rollback()
+            logger.error(f"Delete error in {self.__class__.__name__}: {str(e)}")
             raise HTTPException(status_code=400, detail=str(e)) 

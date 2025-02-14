@@ -22,14 +22,14 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 class UserService(BaseService[User, UserCreate, UserUpdate]):
     """Service for handling user-related operations."""
     
-    def __init__(self, db: Session):
-        super().__init__(model=User, db=db)
-        
-    async def create_user(self, user_create: UserCreate) -> User:
+    def __init__(self):
+        super().__init__(model=User)
+    
+    async def create_user(self, db: Session, user_create: UserCreate) -> User:
         """Create a new user with hashed password"""
         try:
             # Check if email exists
-            if self.db.query(User).filter(User.email == user_create.email).first():
+            if db.query(User).filter(User.email == user_create.email).first():
                 raise HTTPException(status_code=400, detail="Email already registered")
             
             # Hash password
@@ -38,24 +38,24 @@ class UserService(BaseService[User, UserCreate, UserUpdate]):
             user_data["created_at"] = datetime.now(UTC)
             
             user = User(**user_data)
-            self.db.add(user)
-            self.db.commit()
-            self.db.refresh(user)
+            db.add(user)
+            db.commit()
+            db.refresh(user)
             return user
             
         except HTTPException:
             raise
         except Exception as e:
-            self.db.rollback()
+            db.rollback()
             raise HTTPException(status_code=500, detail=str(e))
     
-    async def get_profile(self, user_id: UUID) -> Optional[User]:
+    async def get_profile(self, db: Session, user_id: UUID) -> Optional[User]:
         """Get user profile by ID"""
-        return self.db.query(User).filter(User.id == user_id).first()
+        return db.query(User).filter(User.id == user_id).first()
     
     async def update_profile(self, user_id: UUID, profile: UserUpdate) -> User:
         """Update user profile"""
-        user = await self.get_profile(user_id)
+        user = await self.get_profile(self.db, user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
             
@@ -76,9 +76,9 @@ class UserService(BaseService[User, UserCreate, UserUpdate]):
             self.db.rollback()
             raise HTTPException(status_code=500, detail=str(e))
     
-    async def update_preferences(self, user_id: UUID, preferences: UserPreferences) -> User:
+    async def update_preferences(self, db: Session, user_id: UUID, preferences: UserPreferences) -> User:
         """Update user preferences"""
-        user = await self.get_profile(user_id)
+        user = await self.get_profile(db, user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
             
@@ -90,16 +90,16 @@ class UserService(BaseService[User, UserCreate, UserUpdate]):
             setattr(user.preferences, field, value)
             
         try:
-            self.db.commit()
-            self.db.refresh(user)
+            db.commit()
+            db.refresh(user)
             return user
         except Exception as e:
-            self.db.rollback()
+            db.rollback()
             raise HTTPException(status_code=500, detail=str(e))
     
     async def change_password(self, user_id: UUID, current_password: str, new_password: str) -> bool:
         """Change user password"""
-        user = await self.get_profile(user_id)
+        user = await self.get_profile(self.db, user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
             
@@ -117,7 +117,7 @@ class UserService(BaseService[User, UserCreate, UserUpdate]):
     
     async def deactivate_account(self, user_id: UUID, password: str) -> bool:
         """Deactivate user account"""
-        user = await self.get_profile(user_id)
+        user = await self.get_profile(self.db, user_id)
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
             
@@ -141,10 +141,10 @@ class UserService(BaseService[User, UserCreate, UserUpdate]):
         """Verify a password against hash"""
         return pwd_context.verify(plain_password, hashed_password)
     
-    async def authenticate_user(self, email: str, password: str) -> Optional[User]:
+    async def authenticate_user(self, db: Session, email: str, password: str) -> Optional[User]:
         """Authenticate user by email and password"""
         try:
-            user = self.db.query(User).filter(User.email == email).first()
+            user = db.query(User).filter(User.email == email).first()
             if not user:
                 return None
             
