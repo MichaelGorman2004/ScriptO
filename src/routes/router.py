@@ -1,7 +1,7 @@
 from fastapi import APIRouter
-from .notes_route import router as notes_router
-from .ai_route import router as ai_router
-from .users_route import router as users_router
+from .note_routes import router as notes_router
+from .ai_routes import router as ai_router
+from .user_routes import router as users_router
 
 # Main API Router
 api_router = APIRouter()
