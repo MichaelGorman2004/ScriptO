@@ -1,6 +1,7 @@
 import logging
 from logging.handlers import RotatingFileHandler
 import os
+from datetime import datetime
 
 def setup_logging() -> logging.Logger:
     """Configure logging for the application"""
@@ -35,4 +36,6 @@ def setup_logging() -> logging.Logger:
     logger.addHandler(console_handler)
     logger.addHandler(file_handler)
     
-    return logger 
+    return logger
+
+logger = setup_logging() 
