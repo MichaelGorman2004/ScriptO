@@ -27,7 +27,7 @@ SessionLocal = sessionmaker(
 # Base class for models
 Base = declarative_base()
 
-def get_db() -> Generator[Session, None, None]:
+def get_db_session() -> Generator[Session, None, None]:
     """Database session dependency"""
     db = SessionLocal()
     try:
@@ -36,7 +36,7 @@ def get_db() -> Generator[Session, None, None]:
         db.close()
 
 # Dependency for FastAPI endpoints
-db_dependency = Depends(get_db)
+db_dependency = Depends(get_db_session)
 
 @contextmanager
 def get_db_context():

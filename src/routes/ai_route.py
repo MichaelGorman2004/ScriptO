@@ -9,7 +9,7 @@ from ..services.ai_service import AIService
 from ..utils.response import APIResponse
 from ..middleware.rate_limiter import RateLimiter
 from ..middleware.auth import get_current_user
-from ..db.database import get_db
+from ..db.database import get_db_session
 from ..utils.logging import logger
 
 router = APIRouter()
@@ -21,7 +21,7 @@ async def solve_stem_problem(
     request: StemProblemRequest,
     background_tasks: BackgroundTasks,
     current_user_id: UUID = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_session)
 ):
     """
     Solve a STEM problem using AI
@@ -76,7 +76,7 @@ async def define_term(
     request: DefinitionRequest,
     background_tasks: BackgroundTasks,
     current_user_id: UUID = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_session)
 ):
     """
     Define and explain a term using AI
@@ -128,7 +128,7 @@ async def define_term(
 async def check_status(
     interaction_id: UUID,
     current_user_id: UUID = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_session)
 ):
     """Check the status of an AI interaction"""
     try:

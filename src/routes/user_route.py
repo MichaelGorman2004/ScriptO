@@ -10,7 +10,7 @@ from ..utils.response import APIResponse
 from ..utils.logging import logger
 from ..middleware.rate_limiter import RateLimiter
 from ..middleware.auth import get_current_user
-from ..db.database import get_db
+from ..db.database import get_db_session
 
 router = APIRouter()
 rate_limiter = RateLimiter(requests_per_minute=30)
@@ -19,7 +19,7 @@ user_service = UserService()
 @router.post("/register", response_model=APIResponse)
 async def register_user(
     user: UserCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_session)
 ):
     """Register a new user"""
     try:
@@ -43,7 +43,7 @@ async def register_user(
 @router.get("/profile", response_model=APIResponse)
 async def get_profile(
     current_user_id: UUID = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_session)
 ):
     """Get user profile"""
     try:
@@ -64,7 +64,7 @@ async def get_profile(
 async def update_profile(
     profile: UserUpdate,
     current_user_id: UUID = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_session)
 ):
     """Update user profile"""
     try:
@@ -83,7 +83,7 @@ async def update_profile(
 async def update_preferences(
     preferences: UserPreferences,
     current_user_id: UUID = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_session)
 ):
     """Update user preferences"""
     try:
@@ -103,7 +103,7 @@ async def change_password(
     current_password: str,
     new_password: str,
     current_user_id: UUID = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_session)
 ):
     """Change user password"""
     try:
@@ -121,7 +121,7 @@ async def change_password(
 async def deactivate_account(
     password: str,
     current_user_id: UUID = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_session)
 ):
     """Deactivate user account"""
     try:

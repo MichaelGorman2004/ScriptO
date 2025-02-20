@@ -17,7 +17,7 @@ load_dotenv()
 # Import all models here
 from src.models.user_model import User, UserPreferences
 from src.models.note_model import Note, NoteElement
-from src.models.ai_model import AIAssistant
+from src.models.ai_model import AIInteraction
 from src.db.database import Base
 
 # this is the Alembic Config object, which provides

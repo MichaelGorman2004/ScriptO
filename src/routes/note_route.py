@@ -11,7 +11,7 @@ from ..utils.response import APIResponse
 from ..utils.logging import logger
 from ..middleware.rate_limiter import RateLimiter
 from ..middleware.auth import get_current_user
-from ..db.database import get_db
+from ..db.database import get_db_session
 
 router = APIRouter()
 rate_limiter = RateLimiter(requests_per_minute=60)
@@ -31,7 +31,7 @@ class SortOrder(str, Enum):
 async def create_note(
     note: NoteCreate,
     current_user_id: UUID = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_session)
 ):
     """Create a new note"""
     try:
@@ -55,7 +55,7 @@ async def create_note(
 async def get_note(
     note_id: UUID,
     current_user_id: UUID = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_session)
 ):
     """Get a specific note"""
     try:
@@ -77,7 +77,7 @@ async def update_note(
     note_id: UUID,
     note: NoteUpdate,
     current_user_id: UUID = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_session)
 ):
     """Update an existing note"""
     try:
@@ -98,7 +98,7 @@ async def update_note(
 async def delete_note(
     note_id: UUID,
     current_user_id: UUID = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_session)
 ):
     """Delete a note"""
     try:
@@ -117,7 +117,7 @@ async def delete_note(
 @router.get("/", response_model=APIResponse)
 async def list_notes(
     current_user_id: UUID = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db_session),
     skip: int = 0,
     limit: int = 100
 ):
@@ -143,7 +143,7 @@ async def add_element(
     note_id: UUID,
     element: NoteElement,
     current_user_id: UUID = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_session)
 ):
     """Add an element to a note"""
     try:
@@ -168,7 +168,7 @@ async def share_note(note_id: UUID, user_ids: List[UUID]):
 async def search_notes(
     query: str,
     current_user_id: UUID = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db_session),
     sort_by: str = "modified",
     sort_order: str = "desc",
     skip: int = 0,
@@ -213,7 +213,7 @@ async def search_notes(
 async def bulk_delete_notes(
     note_ids: List[UUID],
     current_user_id: UUID = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db_session)
 ):
     """Delete multiple notes at once"""
     try:

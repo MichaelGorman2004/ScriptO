@@ -1,16 +1,20 @@
 from contextlib import asynccontextmanager
+from typing import AsyncGenerator
 from fastapi import FastAPI
 import logging
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from config.settings import settings
-from db.database import Base, engine
+from src.config.settings import settings
+from src.db.database import Base, engine
 
 logger = logging.getLogger("scripto")
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Handle application lifecycle events"""
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    """
+    Lifecycle manager for the FastAPI application.
+    Handles startup and shutdown events.
+    """
     # Startup
     logger.info("Starting up ScriptO API")
     try:

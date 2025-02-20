@@ -1,6 +1,6 @@
 from fastapi import Request
 from fastapi.middleware.cors import CORSMiddleware
-from config.settings import settings
+from src.config.settings import settings
 import logging
 
 logger = logging.getLogger("scripto")

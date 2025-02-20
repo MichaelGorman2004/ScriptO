@@ -1,7 +1,7 @@
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
 import logging
-from utils.exceptions import AIError, DatabaseError, AuthenticationError
+from src.utils.exceptions import AIError, DatabaseError, AuthenticationError
 
 logger = logging.getLogger("scripto")
 
