@@ -1,5 +1,3 @@
-Let me provide a comprehensive overview of the project:
-
 ### Project Structure Overview
 
 ```
@@ -85,21 +83,164 @@ alembic upgrade head
 - Username: scripto_user
 - Password: password
 
+### Authentication
+
+1. **JWT Implementation**
+```
+- Token-based authentication using JWT
+- 30-minute token expiration
+- Protected routes using get_current_user dependency
+- Password hashing with bcrypt
+```
+
+2. **Auth Routes** (`/api/v1/auth`)
+```
+POST   /login            # Login and get JWT token
+```
+
+3. **Token Response**
+```json
+{
+    "success": true,
+    "message": "Login successful",
+    "data": {
+        "access_token": "jwt_token_here",
+        "token_type": "bearer"
+    },
+    "metadata": {
+        "expires_in": 1800,  // 30 minutes in seconds
+        "timestamp": "2024-03-15T12:00:00Z"
+    }
+}
+```
+
+### Database Management
+
+1. **Session Handling**
+- Database session dependency injection
+- Automatic session cleanup
+- Transaction management
+- Connection pooling configuration
+
+2. **Pool Settings**
+```python
+pool_size: 5
+max_overflow: 10
+pool_timeout: 30
+pool_recycle: 1800
+```
+
+### Background Tasks
+
+1. **AI Processing**
+- Asynchronous task processing
+- Status tracking
+- Error handling
+- Progress monitoring
+
+2. **Task States**
+```
+pending    - Task created, waiting to start
+processing - Task currently running
+completed  - Task finished successfully
+failed     - Task encountered an error
+```
+
+3. **Status Endpoint** (`/api/v1/ai/status/{interaction_id}`)
+```json
+{
+    "success": true,
+    "message": "Status retrieved successfully",
+    "data": {
+        // Task result when completed
+    },
+    "metadata": {
+        "status": "completed",
+        "created_at": "2024-03-15T12:00:00Z",
+        "completed_at": "2024-03-15T12:00:05Z"
+    }
+}
+```
+
+### AI Interaction Tracking
+
+1. **Interaction Model**
+```sql
+CREATE TABLE ai_interactions (
+    id UUID PRIMARY KEY,
+    user_id UUID REFERENCES users(id),
+    type VARCHAR,  -- stem_solution or term_definition
+    status VARCHAR,  -- pending, processing, completed, failed
+    request_data JSONB,
+    response_data JSONB,
+    error_message VARCHAR,
+    created_at TIMESTAMP,
+    completed_at TIMESTAMP
+);
+```
+
+2. **Tracked Operations**
+- STEM problem solving
+- Term definitions
+- Processing status
+- Error handling
+
+### Response Format
+
+All API endpoints now use a standardized response format:
+
+```json
+{
+    "success": boolean,
+    "message": string,
+    "data": any,
+    "metadata": {
+        "timestamp": datetime,
+        "version": string,
+        ...additional metadata
+    }
+}
+```
+
+### Rate Limiting
+
+1. **Default Limits**
+```
+AI Routes:     30 requests/minute
+Note Routes:   60 requests/minute
+User Routes:   30 requests/minute
+```
+
+2. **Rate Limit Response**
+```json
+{
+    "success": false,
+    "message": "Too many requests. Please try again later.",
+    "metadata": {
+        "timestamp": datetime
+    }
+}
+```
+
 ### Current Status
 
 1. **Completed**
 - Database setup and configuration
 - Model definitions
-- Basic service structure
-- Migration system
-- Database connection and management
+- Service layer implementation
+- JWT authentication
+- Background task processing
+- Rate limiting
+- Standardized responses
+- Session management
+- AI interaction tracking
 
 2. **Database Tables Created**
 - users
 - user_preferences
 - notes
 - note_elements
-- ai_assistants
+- ai_interactions
 - alembic_version
 
 ### Next Steps
@@ -176,20 +317,6 @@ POST   /define            # Define term/concept
 - Term definitions
 - Rate limiting: 30 requests/minute
 - Background task processing
-
-### Response Format
-```json
-{
-    "success": boolean,
-    "message": string,
-    "data": any,
-    "metadata": {
-        "timestamp": datetime,
-        "version": string,
-        ...additional metadata
-    }
-}
-```
 
 ### Common Response Codes
 ```
