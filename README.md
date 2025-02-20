@@ -1,61 +1,71 @@
-### Project Structure Overview
+# ScriptO API
 
+A FastAPI-based backend for the ScriptO note-taking and AI assistance platform.
+
+## Features
+
+- JWT-based authentication
+- STEM problem solving with Claude AI
+- Note management with rich content support
+- User preference management
+- Rate limiting
+- Background task processing
+- Standardized API responses
+- PostgreSQL database with SQLAlchemy ORM
+
+## Project Structure
 ```
 src/
 ├── ai/                     # AI-related functionality
 │   ├── config/            # AI configuration settings
 │   ├── providers/         # AI service providers (Claude)
-│   ├── processors/        # Content/problem processors
-│   └── utils/             # AI utilities
+│   └── processors/        # Content processors
 ├── config/                # Application configuration
 │   └── settings.py        # Central settings management
+├── core/                  # Core application components
+│   └── lifecycle.py       # Application lifecycle management
 ├── db/                    # Database configuration
 │   └── database.py        # SQLAlchemy setup
-├── models/                # Database models
-│   ├── ai_model.py        # AI-related tables
-│   ├── note_model.py      # Note-related tables
-│   └── user_model.py      # User-related tables
-├── schemas/               # Pydantic schemas
-│   ├── ai_schema.py       # AI data validation
-│   ├── note_schema.py     # Note data validation
-│   └── user_schema.py     # User data validation
-├── services/             # Business logic
-│   ├── ai_service.py     # AI operations
-│   ├── base_service.py   # Common service functionality
-│   ├── note_service.py   # Note management
-│   └── user_service.py   # User management
-└── main.py               # Application entry point
+├── middleware/            # Middleware components
+│   ├── auth.py           # Authentication middleware
+│   ├── error_handlers.py # Error handling
+│   ├── rate_limiter.py  # Rate limiting
+│   └── security.py      # Security middleware
+├── models/               # Database models
+│   ├── ai_model.py      # AI-related tables
+│   ├── note_model.py    # Note-related tables
+│   └── user_model.py    # User-related tables
+├── routes/              # API routes
+│   ├── ai_route.py     # AI endpoints
+│   ├── auth_route.py   # Authentication endpoints
+│   ├── note_route.py   # Note management
+│   └── user_route.py   # User management
+├── schemas/            # Pydantic schemas
+│   ├── ai_schema.py   # AI data validation
+│   ├── note_schema.py # Note data validation
+│   └── user_schema.py # User data validation
+├── services/          # Business logic
+│   ├── ai_service.py # AI operations
+│   ├── note_service.py # Note management
+│   └── user_service.py # User management
+└── main.py           # Application entry point
 ```
 
-### Key Components
+## Setup
 
-1. **Database Setup**
-- Using PostgreSQL with SQLAlchemy ORM
-- Connection string: `postgresql://scripto_user:password@localhost:5432/scripto`
-- Migrations handled by Alembic
-- Database models in `models/` directory
+1. Create a virtual environment:
+```bash
+python -m venv .venv
+source .venv/bin/activate  # Linux/Mac
+.venv\Scripts\activate     # Windows
+```
 
-2. **Models**
-- `User`: Authentication and profile
-- `UserPreferences`: User settings and preferences
-- `Note`: Main note container
-- `NoteElement`: Individual note components
-- `AIAssistant`: AI-generated content
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
 
-3. **Services**
-- `BaseService`: Common CRUD operations
-- `UserService`: User management and auth
-- `NoteService`: Note operations
-- `AIService`: AI integration
-
-4. **Configuration**
-- Environment variables in `.env`
-- Pydantic settings management
-- Separate configs for development/production
-
-### Database Management
-
-1. **Connection Setup**
+3. Set up PostgreSQL database:
 ```bash
 # Create database and user
 psql postgres
@@ -64,131 +74,44 @@ CREATE USER scripto_user WITH PASSWORD 'password';
 GRANT ALL PRIVILEGES ON DATABASE scripto TO scripto_user;
 ```
 
-2. **Migrations**
+4. Set up environment variables:
 ```bash
-# Initialize Alembic
-alembic init alembic
+# Copy the example env file and update with your values
+cp .env.example .env
+```
 
-# Create migration
-alembic revision --autogenerate -m "Initial migration"
-
-# Apply migration
+5. Run migrations:
+```bash
 alembic upgrade head
 ```
 
-3. **Database Access (Postico)**
-- Host: localhost
-- Port: 5432
-- Database: scripto
-- Username: scripto_user
-- Password: password
-
-### Authentication
-
-1. **JWT Implementation**
-```
-- Token-based authentication using JWT
-- 30-minute token expiration
-- Protected routes using get_current_user dependency
-- Password hashing with bcrypt
+6. Start the server:
+```bash
+uvicorn src.main:app --reload
 ```
 
-2. **Auth Routes** (`/api/v1/auth`)
-```
-POST   /login            # Login and get JWT token
-```
+## API Documentation
 
-3. **Token Response**
-```json
-{
-    "success": true,
-    "message": "Login successful",
-    "data": {
-        "access_token": "jwt_token_here",
-        "token_type": "bearer"
-    },
-    "metadata": {
-        "expires_in": 1800,  // 30 minutes in seconds
-        "timestamp": "2024-03-15T12:00:00Z"
-    }
-}
+- Interactive API docs: http://localhost:8000/docs
+- OpenAPI spec: http://localhost:8000/api/v1/openapi.json
+- Detailed documentation: [API_Documentation.md](API_Documentation.md)
+
+## Authentication
+
+The API uses JWT tokens for authentication. Protected endpoints require a Bearer token:
+```
+Authorization: Bearer <jwt_token>
 ```
 
-### Database Management
+## Rate Limiting
 
-1. **Session Handling**
-- Database session dependency injection
-- Automatic session cleanup
-- Transaction management
-- Connection pooling configuration
+- AI Routes: 30 requests/minute
+- Note Routes: 60 requests/minute
+- User Routes: 30 requests/minute
 
-2. **Pool Settings**
-```python
-pool_size: 5
-max_overflow: 10
-pool_timeout: 30
-pool_recycle: 1800
-```
+## Response Format
 
-### Background Tasks
-
-1. **AI Processing**
-- Asynchronous task processing
-- Status tracking
-- Error handling
-- Progress monitoring
-
-2. **Task States**
-```
-pending    - Task created, waiting to start
-processing - Task currently running
-completed  - Task finished successfully
-failed     - Task encountered an error
-```
-
-3. **Status Endpoint** (`/api/v1/ai/status/{interaction_id}`)
-```json
-{
-    "success": true,
-    "message": "Status retrieved successfully",
-    "data": {
-        // Task result when completed
-    },
-    "metadata": {
-        "status": "completed",
-        "created_at": "2024-03-15T12:00:00Z",
-        "completed_at": "2024-03-15T12:00:05Z"
-    }
-}
-```
-
-### AI Interaction Tracking
-
-1. **Interaction Model**
-```sql
-CREATE TABLE ai_interactions (
-    id UUID PRIMARY KEY,
-    user_id UUID REFERENCES users(id),
-    type VARCHAR,  -- stem_solution or term_definition
-    status VARCHAR,  -- pending, processing, completed, failed
-    request_data JSONB,
-    response_data JSONB,
-    error_message VARCHAR,
-    created_at TIMESTAMP,
-    completed_at TIMESTAMP
-);
-```
-
-2. **Tracked Operations**
-- STEM problem solving
-- Term definitions
-- Processing status
-- Error handling
-
-### Response Format
-
-All API endpoints now use a standardized response format:
-
+All endpoints return responses in the following format:
 ```json
 {
     "success": boolean,
@@ -196,413 +119,42 @@ All API endpoints now use a standardized response format:
     "data": any,
     "metadata": {
         "timestamp": datetime,
-        "version": string,
-        ...additional metadata
+        "version": string
     }
 }
 ```
 
-### Rate Limiting
+## Development
 
-1. **Default Limits**
-```
-AI Routes:     30 requests/minute
-Note Routes:   60 requests/minute
-User Routes:   30 requests/minute
-```
-
-2. **Rate Limit Response**
-```json
-{
-    "success": false,
-    "message": "Too many requests. Please try again later.",
-    "metadata": {
-        "timestamp": datetime
-    }
-}
-```
-
-### Current Status
-
-1. **Completed**
-- Database setup and configuration
-- Model definitions
-- Service layer implementation
-- JWT authentication
-- Background task processing
-- Rate limiting
-- Standardized responses
-- Session management
-- AI interaction tracking
-
-2. **Database Tables Created**
-- users
-- user_preferences
-- notes
-- note_elements
-- ai_interactions
-- alembic_version
-
-### Next Steps
-
-1. **AI Integration**
-- Configure Claude AI provider
-- Implement content processing
-- Set up AI response handling
-
-2. **Testing**
-- Add unit tests
-- Set up test database
-- Create integration tests
-
-3. **Frontend Integration**
-- API documentation
-- CORS configuration
-- Authentication flow
-
-4. **Deployment**
-- Environment configuration
-- Database backups
-- Logging setup
-
-### API Routes
-
-1. **User Routes** (`/api/v1/users`)
-```
-POST   /register           # Register new user
-GET    /profile           # Get user profile
-PUT    /profile           # Update user profile
-PUT    /preferences       # Update user preferences
-POST   /change-password   # Change user password
-DELETE /deactivate        # Deactivate account
-```
-
-2. **Note Routes** (`/api/v1/notes`)
-```
-POST   /                  # Create new note
-GET    /{note_id}        # Get specific note
-PUT    /{note_id}        # Update note
-DELETE /{note_id}        # Delete note
-GET    /                  # List user's notes
-POST   /{note_id}/elements # Add note element
-GET    /search            # Search notes
-DELETE /bulk              # Bulk delete notes
-```
-
-3. **AI Routes** (`/api/v1/ai`)
-```
-POST   /solve             # Solve STEM problem
-POST   /define            # Define term/concept
-```
-
-### Route Details
-
-1. **User Operations**
-- Registration with email validation
-- Profile management
-- Preference settings
-- Password management
-- Account deactivation
-- Rate limiting: 30 requests/minute
-
-2. **Note Operations**
-- Full CRUD functionality
-- Element management
-- Search with sorting options
-- Bulk operations
-- Rate limiting: 60 requests/minute
-
-3. **AI Operations**
-- STEM problem solving
-- Term definitions
-- Rate limiting: 30 requests/minute
-- Background task processing
-
-### Common Response Codes
-```
-200 - Success
-201 - Created
-400 - Bad Request
-401 - Unauthorized
-403 - Forbidden
-404 - Not Found
-429 - Too Many Requests
-500 - Internal Server Error
-```
-
-### Common Operations
-
-1. **Database Operations**
-```sql
--- View tables
-SELECT * FROM information_schema.tables 
-WHERE table_schema = 'public';
-
--- View table structure
-SELECT column_name, data_type 
-FROM information_schema.columns 
-WHERE table_name = 'users';
-
--- Create test user
-INSERT INTO users (id, email, full_name, is_active)
-VALUES (gen_random_uuid(), 'test@example.com', 'Test User', true);
-```
-
-2. **Migration Commands**
+1. Install development dependencies:
 ```bash
-# Create new migration
-alembic revision --autogenerate -m "description"
-
-# Apply migrations
-alembic upgrade head
-
-# Rollback migration
-alembic downgrade -1
+pip install -r requirements-dev.txt
 ```
 
-3. **Application Running**
+2. Run tests:
 ```bash
-# Start application
-uvicorn src.main:app --reload
-
-# View API docs
-http://localhost:8000/docs
+pytest
 ```
 
-### Security Considerations
-
-1. **Environment Variables**
-- Secure storage of secrets
-- Different configs per environment
-- No credentials in version control
-
-2. **Database Security**
-- Connection pooling
-- Password encryption
-- Role-based access
-
-3. **API Security**
-- JWT authentication
-- Rate limiting
-- Input validation
-
-### File Details and Relationships
-
-#### Configuration Files
-1. `.env`
-- Purpose: Environment configuration and secrets
-- Used by: `config/settings.py`, `alembic/env.py`
-- Contains: Database URL, secret keys, debug flags
-- Example:
-  ```env
-  DATABASE_URL=postgresql://scripto_user:password@localhost:5432/scripto
-  SECRET_KEY=your-secret-key
-  SQL_DEBUG=true
-  ```
-
-2. `alembic/env.py`
-- Purpose: Database migration configuration
-- Uses: `.env`, all model files
-- Used by: Alembic CLI commands
-- Key functions:
-  - Loads environment variables
-  - Imports all models for migration detection
-  - Configures database connection
-  - Sets up migration context
-
-#### Core Files
-1. `src/main.py`
-- Purpose: Application entry point
-- Uses: 
-  - `config/settings.py` for configuration
-  - `routes/router.py` for API endpoints
-  - `middleware/` for request processing
-- Key functions:
-  - FastAPI app initialization
-  - Middleware setup
-  - Route registration
-  - Error handling
-
-2. `src/config/settings.py`
-- Purpose: Central configuration management
-- Uses: `.env`
-- Used by: Most application files
-- Manages:
-  - Database settings
-  - API configurations
-  - Security settings
-  - Feature flags
-
-#### Database Layer
-1. `src/db/database.py`
-- Purpose: Database connection management
-- Uses: `config/settings.py`
-- Used by: All models and services
-- Provides:
-  - SQLAlchemy engine configuration
-  - Session management
-  - Connection pooling
-  - Base model class
-
-#### Models
-1. `src/models/user_model.py`
-- Purpose: User data structure
-- Uses: `db/database.py`
-- Used by: 
-  - `services/user_service.py`
-  - `schemas/user_schema.py`
-- Defines:
-  ```python
-  class User:
-      id: UUID
-      email: str
-      hashed_password: str
-      full_name: str
-      is_active: bool
-      preferences: Relationship[UserPreferences]
-      notes: Relationship[Note]
-  ```
-
-2. `src/models/note_model.py`
-- Purpose: Note data structures
-- Uses: 
-  - `db/database.py`
-  - `models/user_model.py` (for relationships)
-- Used by:
-  - `services/note_service.py`
-  - `schemas/note_schema.py`
-- Defines:
-  ```python
-  class Note:
-      id: UUID
-      user_id: UUID
-      title: str
-      content: Relationship[NoteElement]
-      created/modified: datetime
-  ```
-
-3. `src/models/ai_model.py`
-- Purpose: AI interaction data
-- Uses: `db/database.py`
-- Used by:
-  - `services/ai_service.py`
-  - `schemas/ai_schema.py`
-- Defines: AI assistance records and metadata
-
-#### Services
-1. `src/services/base_service.py`
-- Purpose: Generic CRUD operations
-- Uses: `db/database.py`
-- Used by: All other services
-- Provides:
-  - Create/Read/Update/Delete operations
-  - Common query patterns
-  - Error handling
-
-2. `src/services/user_service.py`
-- Purpose: User management logic
-- Uses:
-  - `models/user_model.py`
-  - `services/base_service.py`
-  - `schemas/user_schema.py`
-- Provides:
-  - User creation/authentication
-  - Password hashing
-  - Profile management
-
-3. `src/services/note_service.py`
-- Purpose: Note management logic
-- Uses:
-  - `models/note_model.py`
-  - `services/base_service.py`
-  - `schemas/note_schema.py`
-- Provides:
-  - Note CRUD operations
-  - Element management
-  - Version tracking
-
-4. `src/services/ai_service.py`
-- Purpose: AI integration logic
-- Uses:
-  - `models/ai_model.py`
-  - `services/base_service.py`
-  - `ai/providers/claude_provider.py`
-- Provides:
-  - AI request handling
-  - Response processing
-  - Error management
-
-### Workflow Examples
-
-1. **User Creation Flow**
-```
-Request → main.py
-  → routes/user.py
-    → services/user_service.py
-      → models/user_model.py
-        → db/database.py
-          → PostgreSQL
+3. Format code:
+```bash
+black src/
+isort src/
 ```
 
-2. **Note Creation Flow**
-```
-Request → main.py
-  → routes/note.py
-    → services/note_service.py
-      → models/note_model.py
-        → db/database.py
-          → PostgreSQL
+4. Run linting:
+```bash
+flake8 src/
 ```
 
-3. **AI Assistance Flow**
-```
-Request → main.py
-  → routes/ai.py
-    → services/ai_service.py
-      → ai/providers/claude_provider.py
-        → Claude API
-      → models/ai_model.py
-        → db/database.py
-          → PostgreSQL
-```
+## Contributing
 
-4. **Database Migration Flow**
-```
-alembic revision --autogenerate
-  → alembic/env.py
-    → models/*
-      → db/database.py
-        → PostgreSQL
-```
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
 
-### Development Workflow
+## License
 
-1. **Adding New Feature**
-```
-1. Update models/ (if needed)
-2. Create migration (alembic revision)
-3. Update schemas/
-4. Update/create service
-5. Add routes
-6. Update tests
-7. Document changes
-```
-
-2. **Database Changes**
-```
-1. Modify models/
-2. Generate migration
-3. Test migration
-4. Update related services
-5. Update tests
-6. Apply migration
-```
-
-3. **Service Changes**
-```
-1. Update service logic
-2. Update schemas if needed
-3. Update tests
-4. Update documentation
-5. Test endpoints
-```
+This project is licensed under the MIT License - see the LICENSE file for details.
