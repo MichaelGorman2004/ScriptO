@@ -1,5 +1,17 @@
 # ScriptO API Documentation
 
+## ⚠️ License Notice
+
+```
+Copyright (c) 2025 Michael Gorman
+All rights reserved.
+
+This documentation and associated code are made public for viewing 
+and educational purposes only. No permission is granted for any use,
+modification, or distribution without explicit written permission
+from the copyright holder.
+```
+
 ## Overview
 ScriptO is a note-taking and AI assistance platform that provides STEM problem-solving and term definition capabilities.
 

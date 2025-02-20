@@ -1,5 +1,16 @@
 # ScriptO API
 
+## ⚠️ License Notice
+
+```
+Copyright (c) 2025 Michael Gorman
+All rights reserved.
+
+This code is made public for viewing and educational purposes only.
+No permission is granted for any use, modification, or distribution
+without explicit written permission from the copyright holder.
+```
+
 A FastAPI-based backend for the ScriptO note-taking and AI assistance platform.
 
 ## Features
@@ -155,6 +166,3 @@ flake8 src/
 4. Push to the branch
 5. Create a Pull Request
 
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
