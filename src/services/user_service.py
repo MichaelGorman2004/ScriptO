@@ -29,8 +29,13 @@ class UserService(BaseService[User, UserCreate, UserUpdate]):
         """Create a new user with hashed password"""
         try:
             # Check if email exists
-            if db.query(User).filter(User.email == user_create.email).first():
-                raise HTTPException(status_code=400, detail="Email already registered")
+            existing_user = db.query(User).filter(User.email == user_create.email).first()
+            if existing_user:
+                logger.warning(f"Registration attempt with existing email: {user_create.email}")
+                raise HTTPException(
+                    status_code=400, 
+                    detail="Email already registered"
+                )
             
             # Hash password
             user_data = user_create.model_dump()
@@ -44,10 +49,15 @@ class UserService(BaseService[User, UserCreate, UserUpdate]):
             return user
             
         except HTTPException:
+            db.rollback()
             raise
         except Exception as e:
             db.rollback()
-            raise HTTPException(status_code=500, detail=str(e))
+            logger.error(f"Unexpected error during user creation: {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to create user: {str(e)}"
+            )
     
     async def get_profile(self, db: Session, user_id: UUID) -> Optional[User]:
         """Get user profile by ID"""

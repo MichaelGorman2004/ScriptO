@@ -26,10 +26,13 @@ async def register_user(
         logger.info("New user registration request")
         created_user = await user_service.create_user(db, user)
         
+        # Convert to UserProfile schema before returning
+        user_profile = UserProfile.model_validate(created_user)
+        
         return APIResponse(
             success=True,
             message="User registered successfully",
-            data=created_user,
+            data=user_profile,
             metadata={
                 "timestamp": datetime.now(UTC)
             }

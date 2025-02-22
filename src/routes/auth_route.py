@@ -17,8 +17,15 @@ async def login(
 ):
     """Login user and return JWT token"""
     try:
-        user_service = UserService(db)
+        # Enhanced debug logging
+        logger.info("Login request received")
+        logger.info(f"Request form data: {form_data.__dict__ if hasattr(form_data, '__dict__') else 'No form data'}")
+        logger.info(f"Username present: {hasattr(form_data, 'username')}")
+        logger.info(f"Password present: {hasattr(form_data, 'password')}")
+        
+        user_service = UserService()
         user = await user_service.authenticate_user(
+            db=db,
             email=form_data.username,
             password=form_data.password
         )
