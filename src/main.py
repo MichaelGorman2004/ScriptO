@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.config.settings import settings
 from src.routes.router import api_router
 from src.core.lifecycle import lifespan
-from src.middleware.security import setup_cors, log_request_middleware
+from src.middleware.security import setup_security, log_request_middleware
 from src.middleware.error_handlers import setup_exception_handlers
 from src.utils.logging import setup_logging
 
@@ -25,7 +25,7 @@ app = FastAPI(
 )
 
 # Configure middleware and error handlers
-setup_cors(app)
+setup_security(app)
 setup_exception_handlers(app)
 app.middleware("http")(log_request_middleware)
 

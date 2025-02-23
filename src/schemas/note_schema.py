@@ -17,7 +17,31 @@ Key Components:
 from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, conlist
+
+class Point(BaseModel):
+    x: float = Field(..., ge=0, le=10000)  # Reasonable bounds
+    y: float = Field(..., ge=0, le=10000)
+    pressure: float = Field(default=1.0, ge=0, le=1.0)
+
+class Bounds(BaseModel):
+    x: float = Field(..., ge=0)
+    y: float = Field(..., ge=0)
+    width: float = Field(..., gt=0)
+    height: float = Field(..., gt=0)
+
+class StrokeProperties(BaseModel):
+    color: str = Field(..., pattern="^#[0-9a-fA-F]{6}$")
+    width: float = Field(..., gt=0, le=50.0)
+
+class DrawingElement(BaseModel):
+    type: str = Field(..., pattern="^drawing$")
+    content: List[Point] = Field(..., max_length=5000)  # Max points per stroke
+    bounds: Bounds
+    stroke_properties: StrokeProperties
+
+class NoteContent(BaseModel):
+    content: List[DrawingElement] = Field(..., max_length=100)  # Max strokes per note
 
 class NoteElementBase(BaseModel):
     """

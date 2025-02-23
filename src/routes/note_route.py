@@ -4,8 +4,9 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 from datetime import datetime, UTC
 from enum import Enum
+from pydantic import ValidationError
 
-from ..schemas.note_schema import NoteCreate, NoteResponse, NoteUpdate, NoteElement
+from ..schemas.note_schema import NoteCreate, NoteResponse, NoteUpdate, NoteElement, NoteContent
 from ..services.note_service import NoteService
 from ..utils.response import APIResponse
 from ..utils.logging import logger
@@ -29,13 +30,23 @@ class SortOrder(str, Enum):
 
 @router.post("/", response_model=APIResponse)
 async def create_note(
-    note: NoteCreate,
+    note: NoteContent,
     current_user_id: UUID = Depends(get_current_user),
     db: Session = Depends(get_db_session)
 ):
-    """Create a new note"""
+    """Create a new note with drawing content"""
     try:
-        logger.info(f"Creating note for user {current_user_id}")
+        # Calculate total points for metadata
+        total_points = sum(len(element.content) for element in note.content)
+        logger.info(f"Creating note with {total_points} points across {len(note.content)} strokes")
+        
+        # Add size validation
+        if total_points > 50000:  # Example limit
+            raise HTTPException(
+                status_code=413,
+                detail=f"Note exceeds maximum point limit: {total_points}/50000"
+            )
+        
         created_note = await note_service.create_note(db, note, current_user_id)
         
         return APIResponse(
@@ -44,9 +55,14 @@ async def create_note(
             data=created_note,
             metadata={
                 "timestamp": datetime.now(UTC),
-                "note_id": str(created_note.id)
+                "note_id": str(created_note.id),
+                "points_count": total_points,
+                "strokes_count": len(note.content)
             }
         )
+    except ValidationError as e:
+        logger.error(f"Validation error: {str(e)}")
+        raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
         logger.error(f"Error creating note: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to create note")

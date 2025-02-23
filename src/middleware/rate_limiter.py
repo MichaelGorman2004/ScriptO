@@ -1,6 +1,6 @@
 from fastapi import Request, HTTPException
 from typing import Dict, Tuple
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 import logging
 
 logger = logging.getLogger(__name__)
@@ -31,4 +31,29 @@ class RateLimiter:
             )
 
         # Add new request
-        self.requests[client_ip].append(now) 
+        self.requests[client_ip].append(now)
+
+class DrawingRateLimiter(RateLimiter):
+    def __init__(self, points_per_minute: int = 100000):
+        super().__init__(requests_per_minute=30)
+        self.points_per_minute = points_per_minute
+        self.points_counter = 0
+        self.last_reset = datetime.now(UTC)
+    
+    async def check_rate_limit(self, request: Request):
+        # Reset counter if minute has passed
+        now = datetime.now(UTC)
+        if (now - self.last_reset).seconds >= 60:
+            self.points_counter = 0
+            self.last_reset = now
+        
+        # Check content size
+        if request.headers.get("content-length"):
+            size = int(request.headers["content-length"])
+            if size > 1_000_000:  # 1MB limit
+                raise HTTPException(
+                    status_code=413,
+                    detail="Request too large"
+                )
+        
+        return await super().check_rate_limit(request) 
